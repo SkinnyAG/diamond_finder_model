@@ -2,16 +2,18 @@ from minecraft_agent_env import MinecraftAgentEnv
 from q_network import QNetwork
 from replay_buffer import ReplayBuffer
 import torch.optim as optim
+from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import random
 import torch
 
 # Hyperparameters
 num_episodes = 64
-learning_rate = 0.0001
+learning_rate = 0.001
 update_target_freq = 2
-batch_size = 64
+batch_size = 512
 gamma = 0.9995
 epsilon_start = 1.0
 epsilon_end = 0.1
@@ -40,8 +42,9 @@ action_size = env.action_space.n
 coordinate_size = len(observation_space[0].nvec)
 surrounding_size = len(observation_space[1].nvec)
 tilt_size = 1
+direction_size = 1
 
-observation_size = coordinate_size + surrounding_size + tilt_size
+observation_size = coordinate_size + surrounding_size + tilt_size + direction_size
 
 q_network = QNetwork(observation_size, action_size)
 
@@ -66,6 +69,11 @@ for episode in range(num_episodes):
                 action = torch.argmax(q_network(state_tensor), dim=1).item()
 
         next_state, reward, done, result = env.step(action)
+
+        if result == "/disconnect":
+            print("Received /disconnect. Ending training...")
+            done = True
+            break 
         match result:
             case "successful-forward":
                 legal_forward[episode] += 1
@@ -81,7 +89,7 @@ for episode in range(num_episodes):
                 illegal_tilt[episode] += 1
             case action_result if "successful-mine-" in action_result:
                 legal_mining[episode] += 1
-            case "illegal-mine":
+            case action_result if "illegal-mine-" in action_result:
                 illegal_mining[episode] += 1
             case "rotation":
                 rotations[episode] += 1
@@ -125,6 +133,9 @@ for episode in range(num_episodes):
     if episode % update_target_freq == 0:
         target_network.load_state_dict(q_network.state_dict())
 
+    if result == "/disconnect":
+        break
+
     print(f"Episode: {episode+1}, Total Reward: {total_reward}, Epsilon: {epsilon}, Loss: {loss}")
 env.close()
 
@@ -162,6 +173,7 @@ axes[1, 1].scatter(episodes, useless_rotations, color='purple', label='Bad rotat
 axes[1, 1].set_title("Valid vs useless Rotation Actions")
 axes[1, 1].set_xlabel('Episodes')
 axes[1, 1].set_ylabel('Count')
+axes[1, 1].legend()
 
 axes[2, 0].scatter(episodes, legal_tilt, color='cyan', label='Legal Tilt', alpha=0.6)
 axes[2, 0].scatter(episodes, illegal_tilt, color='magenta', label='Illegal Tilt', alpha=0.6)
@@ -175,4 +187,10 @@ axes[2, 1].set_title("Rewards")
 axes[2, 1].set_xlabel('Episodes')
 axes[2, 1].set_ylabel('Reward')
 #plt.show()
-plt.savefig("plot.png")
+plots_dir = "plots"
+os.makedirs(plots_dir, exist_ok=True)
+
+current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+plot_filename = os.path.join(plots_dir, f"plot_{current_date}.png")
+
+plt.savefig(plot_filename)

@@ -35,6 +35,8 @@ class MinecraftAgentEnv(gym.Env):
 
         self.tilt_space = spaces.Discrete(len(tilt_values))
 
+        self.direction_space = spaces.Discrete(len(directions))
+
         # Surrounding block space (18 blocks surrounding the player + 1 target block)
         num_block_types = len(BLOCK_MAPPINGS)
         self.surrounding_block_space = spaces.MultiDiscrete([num_block_types] * len(block_directions))
@@ -43,7 +45,8 @@ class MinecraftAgentEnv(gym.Env):
         self.observation_space = spaces.Tuple((
             self.coordinate_space,
             self.surrounding_block_space,
-            self.tilt_space
+            self.tilt_space,
+            self.direction_space
         ))
 
         # Action space: 9 discrete actions (turn-left, turn-right, forward, tilt-up, tilt-down, forward-up, forward-down, mine, mine-lower)
@@ -76,10 +79,12 @@ class MinecraftAgentEnv(gym.Env):
     def step(self, action):
         # Sends action to plugin
         action_str = actions[action]
-        #time.sleep(0.1)
+        #time.sleep(3)
         self.client_socket.sendall(f"{action_str}\n".encode('utf-8'))
 
         state, result = self._receive_state()
+        if result == "/disconnect":
+            return None, 0, True, "/disconnect"
         #print(f"Result: {result}")
 
         reward = self._calculate_reward(result)
@@ -94,8 +99,7 @@ class MinecraftAgentEnv(gym.Env):
     def _receive_state(self):
         state_data = self.client_socket.recv(1024).decode('utf-8').strip()
         if state_data == "/disconnect":
-            self.close()
-
+            return None, "/disconnect"
 
         try:
             state_json = json.loads(state_data)
@@ -106,8 +110,12 @@ class MinecraftAgentEnv(gym.Env):
             raw_tilt = state_json.get("tilt", 0)
             tilt_index = tilt_values.index(raw_tilt)
 
+            raw_direction = state_json.get("direction", "unknown")
+            #print(f"Direction: {raw_direction}")
+            direction_index = directions.index(raw_direction)
+
             action_result = state_json.get("actionResult", "unknown")
-            print(action_result)
+            #print(action_result)
 
             surrounding_blocks_dict = state_json.get("surroundingBlocks", {})
 
@@ -116,7 +124,7 @@ class MinecraftAgentEnv(gym.Env):
                 for direction in block_directions
             ]
             
-            state = np.concatenate([encoded_coordinates, surrounding_blocks, [tilt_index]])
+            state = np.concatenate([encoded_coordinates, surrounding_blocks, [tilt_index], [direction_index]])
             return state, action_result
         except json.JSONDecodeError:
             print("Failed to decode json from plugin")
