@@ -7,13 +7,20 @@ import socket
 import json
 import time
 
-actions = ["turn-right", "turn-left", "move-forward", "mine", "tilt-down", "tilt-up", "forward-up", "forward-down"]
-directions = ["targetBlock", "behindTop", "behindBottom", "leftTop", "forwardTop", "rightBottom","leftBottom", "up", "forwardBottom", "down", "rightTop", "forwardAbove", "forwardBelow"]
+actions = ["turn-right", "turn-left", "move-forward", "mine", "mine-lower", "tilt-down", "tilt-up", "forward-up", "forward-down"]
+block_directions = ["targetBlock", "down", "up",
+                "underEast", "underWest", "underNorth", "underSouth",
+                  "lowerEast", "lowerWest","lowerNorth", "lowerSouth",
+                    "upperEast", "upperWest", "upperNorth", "upperSouth",
+                        "aboveEast", "aboveWest", "aboveNorth", "aboveSouth"]
+directions = ["NORTH", "SOUTH", "EAST", "WEST"]
+tilt_values = [-90,-45,0,45,90]
+
 
 
 
 class MinecraftAgentEnv(gym.Env):
-    def __init__(self, host="localhost", port=5000, max_steps=1024):
+    def __init__(self, host="localhost", port=5000, max_steps=4096):
         super(MinecraftAgentEnv, self).__init__()
 
         self.host = host
@@ -26,12 +33,11 @@ class MinecraftAgentEnv(gym.Env):
         x_max, y_max, z_max = 128, 62, 128
         self.coordinate_space = spaces.MultiDiscrete([x_max + 1, y_max + 1, z_max + 1])
 
-        tilt_values = [-90,-45,0,45,90]
         self.tilt_space = spaces.Discrete(len(tilt_values))
 
-        # Surrounding block space (12 blocks surrounding the player + 1 target block)
+        # Surrounding block space (18 blocks surrounding the player + 1 target block)
         num_block_types = len(BLOCK_MAPPINGS)
-        self.surrounding_block_space = spaces.MultiDiscrete([num_block_types] * len(directions))
+        self.surrounding_block_space = spaces.MultiDiscrete([num_block_types] * len(block_directions))
 
         # Observation space as a combination of coordinates and surrounding blocks
         self.observation_space = spaces.Tuple((
@@ -40,8 +46,8 @@ class MinecraftAgentEnv(gym.Env):
             self.tilt_space
         ))
 
-        # Action space: 8 discrete actions (turn-left, turn-right, forward, tilt-up, tilt-down, forward-up, forward-down and mine)
-        self.action_space = spaces.Discrete(8)
+        # Action space: 9 discrete actions (turn-left, turn-right, forward, tilt-up, tilt-down, forward-up, forward-down, mine, mine-lower)
+        self.action_space = spaces.Discrete(9)
 
         self.max_steps = max_steps
         self.step_count = 0
@@ -87,6 +93,9 @@ class MinecraftAgentEnv(gym.Env):
 
     def _receive_state(self):
         state_data = self.client_socket.recv(1024).decode('utf-8').strip()
+        if state_data == "/disconnect":
+            self.close()
+
 
         try:
             state_json = json.loads(state_data)
@@ -94,7 +103,8 @@ class MinecraftAgentEnv(gym.Env):
             x,y,z = state_json.get("x", 0), state_json.get("y", 0), state_json.get("z", 0)
             encoded_coordinates = np.array([x,y,z], dtype=np.float32)
 
-            tilt = state_json.get("tilt", 0)
+            raw_tilt = state_json.get("tilt", 0)
+            tilt_index = tilt_values.index(raw_tilt)
 
             action_result = state_json.get("actionResult", "unknown")
             print(action_result)
@@ -103,15 +113,10 @@ class MinecraftAgentEnv(gym.Env):
 
             surrounding_blocks = [
                 BLOCK_MAPPINGS.get(surrounding_blocks_dict.get(direction, "AIR"), 0) 
-                for direction in directions
+                for direction in block_directions
             ]
-            """
-            observation = {
-                "coordinates": encoded_coordinates,
-                "tilt": tilt,
-                "surrounding_blocks": np.array(surrounding_blocks, )
-            }"""
-            state = np.concatenate([encoded_coordinates, surrounding_blocks, [tilt]])
+            
+            state = np.concatenate([encoded_coordinates, surrounding_blocks, [tilt_index]])
             return state, action_result
         except json.JSONDecodeError:
             print("Failed to decode json from plugin")

@@ -9,8 +9,8 @@ import torch
 
 # Hyperparameters
 num_episodes = 64
-learning_rate = 0.001
-update_target_freq = 4
+learning_rate = 0.0001
+update_target_freq = 2
 batch_size = 64
 gamma = 0.9995
 epsilon_start = 1.0
@@ -64,10 +64,6 @@ for episode in range(num_episodes):
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
                 action = torch.argmax(q_network(state_tensor), dim=1).item()
-
-        
-
-        
 
         next_state, reward, done, result = env.step(action)
         match result:

@@ -2,10 +2,10 @@ import neat
 import numpy as np
 from minecraft_agent_env import MinecraftAgentEnv
 
+env = MinecraftAgentEnv()
 
 def eval_genome(genome, config):
     net = neat.nn.FeedForwardNetwork.create(genome, config)
-    env = MinecraftAgentEnv()
     state, _ = env.reset()
 
     done = False
