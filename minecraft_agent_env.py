@@ -7,14 +7,14 @@ import socket
 import json
 import time
 
-actions = ["turn-right", "turn-left", "move-forward", "mine", "mine-lower", "tilt-down", "tilt-up", "forward-up", "forward-down"]
+actions = ["turn-right", "turn-left", "move-forward", "mine", "mine-lower", "mine-below-lower", "mine-above-upper", "mine-down", "mine-above", "forward-up", "forward-down"]
 block_directions = ["targetBlock", "down", "up",
                 "underEast", "underWest", "underNorth", "underSouth",
                   "lowerEast", "lowerWest","lowerNorth", "lowerSouth",
                     "upperEast", "upperWest", "upperNorth", "upperSouth",
                         "aboveEast", "aboveWest", "aboveNorth", "aboveSouth"]
 directions = ["NORTH", "SOUTH", "EAST", "WEST"]
-tilt_values = [-90,-45,0,45,90]
+#tilt_values = [-90,-45,0,45,90]
 
 
 
@@ -33,7 +33,7 @@ class MinecraftAgentEnv(gym.Env):
         x_max, y_max, z_max = 128, 62, 128
         self.coordinate_space = spaces.MultiDiscrete([x_max + 1, y_max + 1, z_max + 1])
 
-        self.tilt_space = spaces.Discrete(len(tilt_values))
+        #self.tilt_space = spaces.Discrete(len(tilt_values))
 
         self.direction_space = spaces.Discrete(len(directions))
 
@@ -45,12 +45,12 @@ class MinecraftAgentEnv(gym.Env):
         self.observation_space = spaces.Tuple((
             self.coordinate_space,
             self.surrounding_block_space,
-            self.tilt_space,
+            #self.tilt_space,
             self.direction_space
         ))
 
-        # Action space: 9 discrete actions (turn-left, turn-right, forward, tilt-up, tilt-down, forward-up, forward-down, mine, mine-lower)
-        self.action_space = spaces.Discrete(9)
+        # Action space: 11 discrete actions (turn-left, turn-right, forward, forward-up, forward-down, mine, mine-lower, mine-below-lower, mine-above-upper, mine-down, mine-up)
+        self.action_space = spaces.Discrete(11)
 
         self.max_steps = max_steps
         self.step_count = 0
@@ -78,8 +78,11 @@ class MinecraftAgentEnv(gym.Env):
     
     def step(self, action):
         # Sends action to plugin
+        print(f"list of actions: {actions}")
+        print(f"Actions size: {len(actions)}")
+        print(f"Action index: {action}")
         action_str = actions[action]
-        #time.sleep(3)
+        #time.sleep(1.5)
         self.client_socket.sendall(f"{action_str}\n".encode('utf-8'))
 
         state, result = self._receive_state()
@@ -88,7 +91,7 @@ class MinecraftAgentEnv(gym.Env):
         #print(f"Result: {result}")
 
         reward = self._calculate_reward(result)
-        #print(f"Reward: {reward}")
+        print(f"Reward: {reward}")
 
         self.step_count += 1
 
@@ -107,8 +110,8 @@ class MinecraftAgentEnv(gym.Env):
             x,y,z = state_json.get("x", 0), state_json.get("y", 0), state_json.get("z", 0)
             encoded_coordinates = np.array([x,y,z], dtype=np.float32)
 
-            raw_tilt = state_json.get("tilt", 0)
-            tilt_index = tilt_values.index(raw_tilt)
+            #raw_tilt = state_json.get("tilt", 0)
+            #tilt_index = tilt_values.index(raw_tilt)
 
             raw_direction = state_json.get("direction", "unknown")
             #print(f"Direction: {raw_direction}")
@@ -120,11 +123,12 @@ class MinecraftAgentEnv(gym.Env):
             surrounding_blocks_dict = state_json.get("surroundingBlocks", {})
 
             surrounding_blocks = [
-                BLOCK_MAPPINGS.get(surrounding_blocks_dict.get(direction, "AIR"), 0) 
+                BLOCK_MAPPINGS.get(surrounding_blocks_dict.get(direction, "UNKNOWN"), 0) 
                 for direction in block_directions
             ]
             
-            state = np.concatenate([encoded_coordinates, surrounding_blocks, [tilt_index], [direction_index]])
+            state = np.concatenate([encoded_coordinates, surrounding_blocks, [direction_index]])
+            print(f"State: {state}")
             return state, action_result
         except json.JSONDecodeError:
             print("Failed to decode json from plugin")

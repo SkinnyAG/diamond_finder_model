@@ -1,7 +1,7 @@
 import random
 
 class ReplayBuffer:
-    def __init__(self, max_size=50000):
+    def __init__(self, max_size=1000000):
         self.buffer = []
         self.max_size = max_size
 

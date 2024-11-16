@@ -10,7 +10,7 @@ import random
 import torch
 
 # Hyperparameters
-num_episodes = 64
+num_episodes = 128
 learning_rate = 0.001
 update_target_freq = 2
 batch_size = 512
@@ -31,8 +31,9 @@ illegal_mining = [0] * num_episodes
 rotations = [0] * num_episodes
 useless_rotations = [0] * num_episodes
 
-legal_tilt = [0] * num_episodes
-illegal_tilt = [0] * num_episodes
+#legal_tilt = [0] * num_episodes
+#illegal_tilt = [0] * num_episodes
+ores_mined = [0] * num_episodes
 
 all_rewards = [0] * num_episodes
 
@@ -41,10 +42,10 @@ observation_space = env.observation_space
 action_size = env.action_space.n
 coordinate_size = len(observation_space[0].nvec)
 surrounding_size = len(observation_space[1].nvec)
-tilt_size = 1
+#tilt_size = 1
 direction_size = 1
 
-observation_size = coordinate_size + surrounding_size + tilt_size + direction_size
+observation_size = coordinate_size + surrounding_size + direction_size
 
 q_network = QNetwork(observation_size, action_size)
 
@@ -66,6 +67,7 @@ for episode in range(num_episodes):
         else:
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
+                print(state_tensor)
                 action = torch.argmax(q_network(state_tensor), dim=1).item()
 
         next_state, reward, done, result = env.step(action)
@@ -83,10 +85,8 @@ for episode in range(num_episodes):
                 legal_diag[episode] += 1
             case "illegal-diag":
                 illegal_diag[episode] += 1
-            case "successful-tilt":
-                legal_tilt[episode] += 1
-            case "illegal-tilt":
-                illegal_tilt[episode] += 1
+            case action_result if "_ore" in action_result:
+                ores_mined[episode] += 1
             case action_result if "successful-mine-" in action_result:
                 legal_mining[episode] += 1
             case action_result if "illegal-mine-" in action_result:
@@ -175,12 +175,18 @@ axes[1, 1].set_xlabel('Episodes')
 axes[1, 1].set_ylabel('Count')
 axes[1, 1].legend()
 
+axes[2, 0].scatter(episodes, ores_mined, color='cyan', label="Ores mined", alpha=0.6)
+axes[2, 0].set_title("Ores mined")
+axes[2, 0].set_xlabel('Episodes')
+axes[2, 0].set_ylabel('Count')
+"""
 axes[2, 0].scatter(episodes, legal_tilt, color='cyan', label='Legal Tilt', alpha=0.6)
 axes[2, 0].scatter(episodes, illegal_tilt, color='magenta', label='Illegal Tilt', alpha=0.6)
 axes[2, 0].set_title("Legal vs Illegal Tilt Actions")
 axes[2, 0].set_xlabel('Episodes')
 axes[2, 0].set_ylabel('Count')
 axes[2, 0].legend()
+"""
 
 axes[2, 1].scatter(episodes, all_rewards, color='green', label="Rewards", alpha=0.6)
 axes[2, 1].set_title("Rewards")
