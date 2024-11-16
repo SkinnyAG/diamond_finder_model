@@ -78,9 +78,9 @@ class MinecraftAgentEnv(gym.Env):
     
     def step(self, action):
         # Sends action to plugin
-        print(f"list of actions: {actions}")
-        print(f"Actions size: {len(actions)}")
-        print(f"Action index: {action}")
+        #print(f"list of actions: {actions}")
+        #print(f"Actions size: {len(actions)}")
+        #print(f"Action index: {action}")
         action_str = actions[action]
         #time.sleep(1.5)
         self.client_socket.sendall(f"{action_str}\n".encode('utf-8'))
@@ -91,7 +91,7 @@ class MinecraftAgentEnv(gym.Env):
         #print(f"Result: {result}")
 
         reward = self._calculate_reward(result)
-        print(f"Reward: {reward}")
+        #print(f"Reward: {reward}")
 
         self.step_count += 1
 
@@ -128,7 +128,7 @@ class MinecraftAgentEnv(gym.Env):
             ]
             
             state = np.concatenate([encoded_coordinates, surrounding_blocks, [direction_index]])
-            print(f"State: {state}")
+            #print(f"State: {state}")
             return state, action_result
         except json.JSONDecodeError:
             print("Failed to decode json from plugin")
