@@ -67,7 +67,6 @@ for episode in range(num_episodes):
         else:
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
-                print(state_tensor)
                 action = torch.argmax(q_network(state_tensor), dim=1).item()
 
         next_state, reward, done, result = env.step(action)

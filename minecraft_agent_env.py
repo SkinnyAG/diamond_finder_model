@@ -30,8 +30,11 @@ class MinecraftAgentEnv(gym.Env):
         self._start_server()
 
         # Shifted coordinate space
-        x_max, y_max, z_max = 128, 62, 128
-        self.coordinate_space = spaces.MultiDiscrete([x_max + 1, y_max + 1, z_max + 1])
+        #x_min, y_min, z_min = -512, -60, -512
+        #x_max, y_max, z_max = 512, 1, 512
+        self.coordinate_space = spaces.MultiDiscrete([1025, 62, 1025])
+        #x_max, y_max, z_max = 128, 62, 128
+        #self.coordinate_space = spaces.MultiDiscrete([x_max + 1, y_max + 1, z_max + 1])
 
         #self.tilt_space = spaces.Discrete(len(tilt_values))
 
@@ -82,7 +85,7 @@ class MinecraftAgentEnv(gym.Env):
         #print(f"Actions size: {len(actions)}")
         #print(f"Action index: {action}")
         action_str = actions[action]
-        #time.sleep(1.5)
+        time.sleep(10)
         self.client_socket.sendall(f"{action_str}\n".encode('utf-8'))
 
         state, result = self._receive_state()
@@ -108,7 +111,11 @@ class MinecraftAgentEnv(gym.Env):
             state_json = json.loads(state_data)
 
             x,y,z = state_json.get("x", 0), state_json.get("y", 0), state_json.get("z", 0)
-            encoded_coordinates = np.array([x,y,z], dtype=np.float32)
+            x_shifted = x + 512
+            y_shifted = y + 60
+            z_shifted = z + 512
+
+            encoded_coordinates = np.array([x_shifted, y_shifted, z_shifted], dtype=np.float32)
 
             #raw_tilt = state_json.get("tilt", 0)
             #tilt_index = tilt_values.index(raw_tilt)
