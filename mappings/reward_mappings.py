@@ -5,7 +5,7 @@ REWARD_MAPPINGS = {
     "successful-diag": 0,
     "illegal-diag": -12,
 
-    "rotation": -1.5,
+    "rotation": -20,
     "useless-rotation": -5,
 
     #"successful-tilt": -0.5,
@@ -16,9 +16,9 @@ REWARD_MAPPINGS = {
     "illegal-diag-mine": -12, 
     "successful-mine-deepslate": 0.3,
     #"successful-mine-deepslate_copper_ore": 2048,
-    "successful-mine-deepslate_gold_ore": 2048,
-    "successful-mine-deepslate_lapis_ore": 2048,
-    "successful-mine-deepslate_redstone_ore": 2048,  
+    "successful-mine-deepslate_gold_ore": 4096,
+    "successful-mine-deepslate_lapis_ore": 4096,
+    "successful-mine-deepslate_redstone_ore": 4096,  
     "successful-mine-deepslate_iron_ore": 4096,
-    "successful-mine-deepslate_diamond_ore": 8192
+    "successful-mine-deepslate_diamond_ore": 4096
 }

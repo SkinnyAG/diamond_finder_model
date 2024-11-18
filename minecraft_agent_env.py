@@ -9,18 +9,23 @@ import time
 
 actions = ["turn-right", "turn-left", "move-forward", "mine", "mine-lower", "mine-below-lower", "mine-above-upper", "mine-down", "mine-above", "forward-up", "forward-down"]
 block_directions = ["targetBlock", "down", "up",
+                    "underForward", "underBehind", "underRight", "underLeft",
+                    "lowerForward", "lowerBehind", "lowerRight", "lowerLeft",
+                    "upperForward", "upperBehind", "upperRight", "upperLeft",
+                    "aboveForward", "aboveBehind", "aboveRight", "aboveLeft"]
+"""block_directions = ["targetBlock", "down", "up",
                 "underEast", "underWest", "underNorth", "underSouth",
                   "lowerEast", "lowerWest","lowerNorth", "lowerSouth",
                     "upperEast", "upperWest", "upperNorth", "upperSouth",
-                        "aboveEast", "aboveWest", "aboveNorth", "aboveSouth"]
-directions = ["NORTH", "SOUTH", "EAST", "WEST"]
+                        "aboveEast", "aboveWest", "aboveNorth", "aboveSouth"]"""
+#directions = ["NORTH", "SOUTH", "EAST", "WEST"]
 #tilt_values = [-90,-45,0,45,90]
 
 
 
 
 class MinecraftAgentEnv(gym.Env):
-    def __init__(self, host="localhost", port=5000, max_steps=4096):
+    def __init__(self, host="localhost", port=5000, max_steps=2048):
         super(MinecraftAgentEnv, self).__init__()
 
         self.host = host
@@ -38,10 +43,11 @@ class MinecraftAgentEnv(gym.Env):
 
         #self.tilt_space = spaces.Discrete(len(tilt_values))
 
-        self.direction_space = spaces.Discrete(len(directions))
+        #self.direction_space = spaces.Discrete(len(directions))
 
         # Surrounding block space (18 blocks surrounding the player + 1 target block)
-        num_block_types = len(BLOCK_MAPPINGS)
+        #num_block_types = len(BLOCK_MAPPINGS)
+        num_block_types = 4
         self.surrounding_block_space = spaces.MultiDiscrete([num_block_types] * len(block_directions))
 
         # Observation space as a combination of coordinates and surrounding blocks
@@ -49,7 +55,7 @@ class MinecraftAgentEnv(gym.Env):
             self.coordinate_space,
             self.surrounding_block_space,
             #self.tilt_space,
-            self.direction_space
+            #self.direction_space
         ))
 
         # Action space: 11 discrete actions (turn-left, turn-right, forward, forward-up, forward-down, mine, mine-lower, mine-below-lower, mine-above-upper, mine-down, mine-up)
@@ -85,7 +91,7 @@ class MinecraftAgentEnv(gym.Env):
         #print(f"Actions size: {len(actions)}")
         #print(f"Action index: {action}")
         action_str = actions[action]
-        time.sleep(10)
+        #time.sleep(10)
         self.client_socket.sendall(f"{action_str}\n".encode('utf-8'))
 
         state, result = self._receive_state()
@@ -120,21 +126,23 @@ class MinecraftAgentEnv(gym.Env):
             #raw_tilt = state_json.get("tilt", 0)
             #tilt_index = tilt_values.index(raw_tilt)
 
-            raw_direction = state_json.get("direction", "unknown")
+            #raw_direction = state_json.get("direction", "unknown")
             #print(f"Direction: {raw_direction}")
-            direction_index = directions.index(raw_direction)
+            #direction_index = directions.index(raw_direction)
 
             action_result = state_json.get("actionResult", "unknown")
             #print(action_result)
 
             surrounding_blocks_dict = state_json.get("surroundingBlocks", {})
 
+            #print(f"Surrounding blocks: {surrounding_blocks_dict}")
+
             surrounding_blocks = [
                 BLOCK_MAPPINGS.get(surrounding_blocks_dict.get(direction, "UNKNOWN"), 0) 
                 for direction in block_directions
             ]
             
-            state = np.concatenate([encoded_coordinates, surrounding_blocks, [direction_index]])
+            state = np.concatenate([encoded_coordinates, surrounding_blocks])
             #print(f"State: {state}")
             return state, action_result
         except json.JSONDecodeError:
